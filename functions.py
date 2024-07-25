@@ -11,35 +11,44 @@ import os
 import pynapple as nap
 import scipy
 import matplotlib.pyplot as plt
+import configparser
 
-def load_cell_metrics(cell_metrics_path=r"D:\OneDrive - McGill University\Peyrache Lab\project_LowHD\data_tables\cellmetricsA37.csv"):
+# Set up configuration
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+data_dir = config['Directories']['data_dir']
+project_dir = config['Directories']['project_dir']
+cell_metrics_path = config['Paths']['cell_metrics_path']
+
+
+def load_cell_metrics(path=cell_metrics_path):
     """
     Loads the cell metrics CSV file into a Pandas dataframe.
-    :param cell_metrics_path: (str) Path to cell metrics spreadsheet.
+    :param path: (str) Path to cell metrics spreadsheet.
     :return: Returns Pandas dataframe of the cell metrics
     """
-    return pd.read_csv(cell_metrics_path)
+    return pd.read_csv(path)
 
 
-def load_data(session, remove_noise = True, base_path = r"D:\OneDrive - McGill University\Peyrache Lab\Data\000939", cell_metrics_path =r"D:\OneDrive - McGill University\Peyrache Lab\project_LowHD\data_tables\cellmetricsA37.csv" ):
+def load_data(session, remove_noise=True, data_directory=data_dir,
+              cell_metrics_path=cell_metrics_path):
     """
-    TODO: Once session naming is consistent in datafiles, load the Pynapple file directly here.
-    :param data: Pynapple object
     :param session: (str) Session name, formatted according to cell metrics spreadsheet
     :param remove_noise: (bool) Whether to remove noisy cells. Default is True.
-    :param base_path
+    :param data_directory: (str) Directory where data is stored
     :return: Pynapple data with the cell metrics added to the units
     """
 
     # load data
     folder_name, file_name = generate_session_paths(session)
-    data_path = os.path.join(base_path, folder_name, file_name)
+    data_path = os.path.join(data_directory, folder_name, file_name)
     data = nap.load_file(data_path)
 
     # load cell metrics
-    cell_metrics = load_cell_metrics(cell_metrics_path=cell_metrics_path)
-    cell_metrics = cell_metrics[cell_metrics['sessionName']==session] # restrict cell metrics only to current session
-    cell_metrics = cell_metrics.reset_index(drop=True) # reset index to align with spikes indices
+    cell_metrics = load_cell_metrics(path=cell_metrics_path)
+    cell_metrics = cell_metrics[cell_metrics['sessionName'] == session]  # restrict cell metrics only to current session
+    cell_metrics = cell_metrics.reset_index(drop=True)  # reset index to align with spikes indices
 
     # add cell metrics to spike metadata
     data['units'].set_info(cell_metrics)
@@ -47,12 +56,12 @@ def load_data(session, remove_noise = True, base_path = r"D:\OneDrive - McGill U
     if remove_noise:
         # remove noisy cells
         cell_tags = data['units'].getby_category('gd')
-        data['units'] = cell_tags[1] # getting all cells where good = 1 (=True)
+        data['units'] = cell_tags[1]  # getting all cells where good = 1 (=True)
 
     return data
 
-def calculate_speed(position):
 
+def calculate_speed(position):
     """
     Calculate animal's speed from animal's 2D position data
     :param position: (TsdFrame) Animal's 2D position data
@@ -61,6 +70,7 @@ def calculate_speed(position):
     speed = np.hstack([0, np.linalg.norm(np.diff(position.d, axis=0), axis=1) / (position.t[1] - position.t[0])])
     speed = nap.Tsd(t=position.t, d=speed)
     return speed
+
 
 def calculate_speed_adrian(position):
     """
@@ -74,11 +84,11 @@ def calculate_speed_adrian(position):
     dt = np.diff(position.t)
 
     # Calculate velocity components
-    vx = dx/dt
-    vy = dy/dt
+    vx = dx / dt
+    vy = dy / dt
 
     # calculate the magnitude of velocity
-    v = np.sqrt(vx**2 + vy**2)
+    v = np.sqrt(vx ** 2 + vy ** 2)
 
     return v
 
@@ -148,4 +158,4 @@ def split_epoch(epoch):
     epoch_1 = nap.IntervalSet(start=start, end=mid)  # first half
     epoch_2 = nap.IntervalSet(start=mid, end=end)  # second half
 
-    return (epoch_1, epoch_2)
+    return epoch_1, epoch_2
