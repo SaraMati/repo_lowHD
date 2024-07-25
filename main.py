@@ -3,6 +3,7 @@ import numpy as np
 import pynapple as nap
 import warnings
 from functions import *
+import configparser
 #import workshop_utils
 
 #import nemos as nmo
@@ -13,10 +14,9 @@ warnings.filterwarnings("ignore")
 # configure pynapple to ignore conversion warning
 nap.nap_config.suppress_conversion_warnings = True
 
-
-
-path = r"D:\OneDrive - McGill University\Peyrache Lab\Data\000939\sub-A3713\sub-A3713_behavior+ecephys.nwb"
-data = nap.load_file(path)
+# session to load
+session = "A3713-200909a"
+data = load_data(session)
 print(data)
 
 spikes = data['units']
