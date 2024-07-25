@@ -159,3 +159,71 @@ def split_epoch(epoch):
     epoch_2 = nap.IntervalSet(start=mid, end=end)  # second half
 
     return epoch_1, epoch_2
+
+def get_sessions(cell_metrics_path=cell_metrics_path):
+    """
+    To get a list of all sessions
+    :param cell_metrics_path: (str) Path to cell metrics file
+    :return: List of stirngs of the session names
+    """
+
+    cm = load_cell_metrics(path=cell_metrics_path)
+    return cm['sessionName'].unique().tolist()
+
+
+def get_cell_type(session, cellID, cell_metrics_path=cell_metrics_path, noise=False):
+    """
+    GEt the cell type of a given cell given its sesison and cell ID.
+    :param session: (str) session name
+    :param cellID: (str) cell ID (note cell ID starts counting at 1, not 0, and restarts per session)
+    :param cell_metrics_path: path to cell metrics file
+    :param noise: If True, returns "noise" for noisy. If False, returns None.
+    :return: (str) cell type  ('hd', 'nhd', 'fs', 'other', 'noise', or None)
+
+    """
+    # import cell metrics
+    cm = load_cell_metrics(cell_metrics_path=cell_metrics_path)
+
+    # get the specific row of the cell
+    cell = cm[(cm['sessionName'] == session) & (cm['cellID'] == cellID)]
+
+    if cell['hd'].values[0] == 1:
+        return 'hd'
+
+    elif cell['nhd'].values[0] == 1:
+        return 'nhd'
+
+    elif cell['fs'].values[0] == 1:
+        return 'fs'
+
+    elif cell['gd'].values[0] == 1:  # not hd, nhd, or fs, but good
+        return 'other'
+
+    else:
+        if noise:
+            return 'noise'
+        else:
+            return None
+
+def get_cell_parameters(session, cellID, cell_metrics_path=cell_metrics_path):
+    """
+    This is useful when working with data without using Pynapple
+    TODO: Check if cell ID is integer or string.
+    :param session: (str) session name
+    :param cellID: (int)
+    :return: Pandas Datarame row of the cell
+    """
+    cm = load_cell_metrics(cell_metrics_path=cell_metrics_path)
+    cell = cm[(cm['sessionName']==session) & (cm['cellID']==cellID)]
+    return cell
+
+
+def compute_log_bins(x, bins):
+    """
+    Computes number of bins for a histogram with a log scale
+    :param x: data
+    :param bins: number of bins
+    :return: number of bins converted for a log scale
+    """
+    logbins = np.logspace(np.log10(np.min(x)), np.log10(np.max(x)), bins + 1)
+    return logbins
