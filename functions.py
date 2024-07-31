@@ -9,18 +9,13 @@ import numpy as np
 import pandas as pd
 import os
 import pynapple as nap
+from misc import *
 import scipy
 import matplotlib.pyplot as plt
 import configparser
 
-# Set up configuration
-config = configparser.ConfigParser()
-config.read('config.ini')
 
-data_dir = config['Directories']['data_dir']
-project_dir = config['Directories']['project_dir']
-cell_metrics_path = config['Paths']['cell_metrics_path']
-
+cell_metrics_path, data_dir, project_dir, results_dir = config()
 
 def load_cell_metrics(path=cell_metrics_path):
     """
@@ -30,9 +25,8 @@ def load_cell_metrics(path=cell_metrics_path):
     """
     return pd.read_csv(path)
 
-
 def load_data(session, remove_noise=True, data_directory=data_dir,
-              cell_metrics_path=cell_metrics_path):
+              cell_metrics_path=cell_metrics_path, lazy_loading=True):
     """
     :param session: (str) Session name, formatted according to cell metrics spreadsheet
     :param remove_noise: (bool) Whether to remove noisy cells. Default is True.
@@ -43,7 +37,7 @@ def load_data(session, remove_noise=True, data_directory=data_dir,
     # load data
     folder_name, file_name = generate_session_paths(session)
     data_path = os.path.join(data_directory, folder_name, file_name)
-    data = nap.load_file(data_path)
+    data = nap.NWBFile(data_path, lazy_loading=lazy_loading)
 
     # load cell metrics
     cell_metrics = load_cell_metrics(path=cell_metrics_path)
@@ -60,6 +54,21 @@ def load_data(session, remove_noise=True, data_directory=data_dir,
 
     return data
 
+def smooth_angular_tuning_curves(tuning_curves, window=20, deviation=3.0):
+    new_tuning_curves = {}
+    for i in tuning_curves.columns:
+        tcurves = tuning_curves[i]
+        offset = np.mean(np.diff(tcurves.index.values))
+        padded = pd.Series(index=np.hstack((tcurves.index.values - (2 * np.pi) - offset,
+                                            tcurves.index.values,
+                                            tcurves.index.values + (2 * np.pi) + offset)),
+                           data=np.hstack((tcurves.values, tcurves.values, tcurves.values)))
+        smoothed = padded.rolling(window=window, win_type='gaussian', center=True, min_periods=1).mean(std=deviation)
+        new_tuning_curves[i] = smoothed.loc[tcurves.index]
+
+    new_tuning_curves = pd.DataFrame.from_dict(new_tuning_curves)
+
+    return new_tuning_curves
 
 def calculate_speed(position):
     """
@@ -128,16 +137,16 @@ def get_wake_square_high_speed_ep(data, thresh=3):
     # Get wake square epoch
     wake_square_ep = data['epochs']['wake_square']
 
-    # Restrct head direction to square wake epoch
+    # Restrict head direction to square wake epoch
     wake_square_hd = data['head-direction'].restrict(wake_square_ep)
 
     # Redefine wake square epoch based on first and last timestamp of restricted head direction
     # (to remove recording artifact)
-    wake_square_ep = nap.IntervalSet(start=wake_square_ep.index[0], end=wake_square_ep.index[-1])
+    wake_square_ep = nap.IntervalSet(start=wake_square_hd.index[0], end=wake_square_hd.index[-1])
 
     # Further restrict epoch by high speed
     speed = calculate_speed(data['position'])
-    high_speed_ep = speed.threshold(3, 'above')
+    high_speed_ep = speed.threshold(3, 'above').time_support
     wake_square_high_velocity_ep = wake_square_ep.intersect(high_speed_ep)
 
     return wake_square_high_velocity_ep

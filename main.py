@@ -14,8 +14,8 @@ warnings.filterwarnings("ignore")
 # configure pynapple to ignore conversion warning
 nap.nap_config.suppress_conversion_warnings = True
 
-# session to load
-session = "A3713-200909a"
+# Loading data
+session = "A3713-200909a" # session to load
 data = load_data(session)
 print(data)
 
