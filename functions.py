@@ -236,3 +236,25 @@ def compute_log_bins(x, bins):
     """
     logbins = np.logspace(np.log10(np.min(x)), np.log10(np.max(x)), bins + 1)
     return logbins
+
+def compute_good_waveform(mean_w):
+    """
+    For a single neuron, returns the good waveform (i.e. from the best channel), and the channel
+    on which the best waveform is recorded.
+    :param mean_w: waveforms of a single neuron (40x64) array
+    :return:(array with good waveform, channel in which good waveform is recorded)
+    """
+    minimum = 0
+    channel = -1
+    waveform = None
+
+    for chan, wave in enumerate(mean_w):
+        temp_min = min(wave)
+        if temp_min<minimum:
+            minimum = temp_min
+            channel = chan
+            waveform = wave
+
+    return (waveform, channel)
+
+
