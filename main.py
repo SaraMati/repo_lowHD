@@ -3,6 +3,7 @@ import numpy as np
 import pynapple as nap
 import warnings
 from functions import *
+from angular_tuning_curves import *
 import configparser
 #import workshop_utils
 
