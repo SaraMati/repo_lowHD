@@ -14,8 +14,8 @@ import scipy
 import matplotlib.pyplot as plt
 import configparser
 
-
 cell_metrics_path, data_dir, project_dir, results_dir = config()
+
 
 def load_cell_metrics(path=cell_metrics_path):
     """
@@ -23,14 +23,66 @@ def load_cell_metrics(path=cell_metrics_path):
     :param path: (str) Path to cell metrics spreadsheet.
     :return: Returns Pandas dataframe of the cell metrics
     """
-    return pd.read_csv(path)
+    return pd.read_csv(path, index_col=0)
+
+
+def merge_cell_metrics(data, on, new_col, replace_existing_data, save, save_path=None, path=cell_metrics_path):
+    """
+    Merges a new data column into the cell metrics DataFrame.
+
+    This function merges a new data column into an existing cell metrics DataFrame
+    based on specified columns. If the column already exists and `replace_existing_data`
+    is True, the existing column will be replaced.
+
+    :param: data : pandas.DataFrame
+         containing the data to be merged.
+    :param: on : list
+        List of columns to merge on.
+    :param: new_col : str
+        Name of the new data column.
+    :param: replace_existing_data : bool
+        If True, replaces the existing data column if it already exists.
+    :param: save : bool
+        If True, saves the new merged cell metrics as a CSV file.
+    :para: save_path : str or None, optional
+        Path to where the file will be saved if save=True. If None, will replace the
+        existing cell metrics file (default is None).
+    :param: cell_metrics_path : str, optional
+        Path to the cell metrics file (default is None).
+
+    :return: pandas.DataFrame
+        The merged cell metrics DataFrame.
+    """
+
+    cell_metrics = load_cell_metrics()
+
+    # drop index of new dataframe
+    data = data.reset_index(drop=True)
+
+    # if replacing the existing data
+    if replace_existing_data and (new_col in cell_metrics.columns):
+        # remove the existing column
+        cell_metrics = cell_metrics.drop(new_col, axis=1)
+
+    # merge data
+    cell_metrics = pd.merge(cell_metrics, data, on=on, how='left')
+
+    if save and (save_path is not None):
+        cell_metrics.to_csv(save_path)  # save to new location
+    elif save:
+        cell_metrics.to_csv(cell_metrics_path)  # replace old cell metrics file
+
+    return cell_metrics
+
 
 def load_data(session, remove_noise=True, data_directory=data_dir,
-              cell_metrics_path=cell_metrics_path, lazy_loading=True):
+              cell_metrics_path=cell_metrics_path, lazy_loading=False):
     """
     :param session: (str) Session name, formatted according to cell metrics spreadsheet
     :param remove_noise: (bool) Whether to remove noisy cells. Default is True.
     :param data_directory: (str) Directory where data is stored
+    :param: cell_metrics_path: (str) Directory to cell metrics file
+    :param: lazy_loading: (bool) highly recommended this stays as False for further analysis
     :return: Pynapple data with the cell metrics added to the units
     """
 
@@ -54,6 +106,7 @@ def load_data(session, remove_noise=True, data_directory=data_dir,
 
     return data
 
+
 def smooth_angular_tuning_curves(tuning_curves, window=20, deviation=3.0):
     new_tuning_curves = {}
     for i in tuning_curves.columns:
@@ -69,6 +122,7 @@ def smooth_angular_tuning_curves(tuning_curves, window=20, deviation=3.0):
     new_tuning_curves = pd.DataFrame.from_dict(new_tuning_curves)
 
     return new_tuning_curves
+
 
 def calculate_speed(position):
     """
@@ -151,7 +205,22 @@ def get_wake_square_high_speed_ep(data, thresh=3):
 
     return wake_square_high_velocity_ep
 
+def remove_na(epoch, feature):
+    """
+    Given an epoch and feature, this function returns the epoch where the feature has value,
+    i.e. restricts the epoch to exclude when the feature has nan
 
+    Note this menas the epoch will be a subset of the feature's time support.
+    If the epoch originally exceeded the bounds of the fetaure's time support, then it will
+    be restricted.
+    :param epoch:
+    :param feature:
+    :return:
+    """
+
+    feature_no_nans_epoch = feature.dropna().time_support
+
+    return epoch.intersect(feature_no_nans_epoch)
 def split_epoch(epoch):
     """
     Given an interval set, returns the interval split in half.
@@ -164,10 +233,36 @@ def split_epoch(epoch):
     end = max(epoch['end'])
     mid = (start + end) / 2
 
-    epoch_1 = nap.IntervalSet(start=start, end=mid)  # first half
-    epoch_2 = nap.IntervalSet(start=mid, end=end)  # second half
+    epoch_1 = epoch.intersect(nap.IntervalSet(start=start, end=mid))
+    epoch_2 = epoch.intersect(nap.IntervalSet(start=mid, end=end))
 
     return epoch_1, epoch_2
+
+def time_reverse_feature(feature, epoch=None):
+    """
+    Feature is time reversed
+    :param feature:
+    :param epoch: If none uses epoch of feature
+    :return:
+    """
+    if epoch is None:
+        epoch = feature.time_support
+
+    # restrict feature to epoch
+    feature_ep = feature.restrict(epoch)
+
+    # extract feature values and time stamps
+    feature_t = feature_ep.t
+    feature_values = feature_ep.values
+
+    # reverse values
+    feature_values_rev = feature_values[::-1]
+
+    # create new Tsd of time reversed feature
+    feature_rev = nap.Tsd(t=feature_t, d=feature_values_rev)
+
+    return feature_rev
+
 
 def get_sessions(cell_metrics_path=cell_metrics_path):
     """
@@ -191,7 +286,7 @@ def get_cell_type(session, cellID, cell_metrics_path=cell_metrics_path, noise=Fa
 
     """
     # import cell metrics
-    cm = load_cell_metrics(cell_metrics_path=cell_metrics_path)
+    cm = load_cell_metrics(path=cell_metrics_path)
 
     # get the specific row of the cell
     cell = cm[(cm['sessionName'] == session) & (cm['cellID'] == cellID)]
@@ -214,6 +309,7 @@ def get_cell_type(session, cellID, cell_metrics_path=cell_metrics_path, noise=Fa
         else:
             return None
 
+
 def get_cell_parameters(session, cellID, cell_metrics_path=cell_metrics_path):
     """
     This is useful when working with data without using Pynapple
@@ -222,8 +318,8 @@ def get_cell_parameters(session, cellID, cell_metrics_path=cell_metrics_path):
     :param cellID: (int)
     :return: Pandas Datarame row of the cell
     """
-    cm = load_cell_metrics(cell_metrics_path=cell_metrics_path)
-    cell = cm[(cm['sessionName']==session) & (cm['cellID']==cellID)]
+    cm = load_cell_metrics(path=cell_metrics_path)
+    cell = cm[(cm['sessionName'] == session) & (cm['cellID'] == cellID)]
     return cell
 
 
@@ -236,6 +332,7 @@ def compute_log_bins(x, bins):
     """
     logbins = np.logspace(np.log10(np.min(x)), np.log10(np.max(x)), bins + 1)
     return logbins
+
 
 def compute_good_waveform(mean_w):
     """
@@ -250,11 +347,9 @@ def compute_good_waveform(mean_w):
 
     for chan, wave in enumerate(mean_w):
         temp_min = min(wave)
-        if temp_min<minimum:
+        if temp_min < minimum:
             minimum = temp_min
             channel = chan
             waveform = wave
 
     return (waveform, channel)
-
-
