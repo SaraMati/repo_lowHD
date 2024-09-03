@@ -1,6 +1,6 @@
 config.ini
 
-/sbi-logs/
+sbi-logs/
 
 # Windows image file caches
 Thumbs.db
