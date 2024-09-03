@@ -6,10 +6,8 @@ from functions import *
 from angular_tuning_curves import *
 import configparser
 #import workshop_utils
-
 #import nemos as nmo
 from sklearn.model_selection import GridSearchCV
-
 warnings.filterwarnings("ignore")
 
 # configure pynapple to ignore conversion warning
@@ -17,13 +15,19 @@ nap.nap_config.suppress_conversion_warnings = True
 
 # Loading data
 session = "A3713-200909a" # session to load
-data = load_data(session)
+data = load_data_DANDI_postsub(session)
 print(data)
 
 spikes = data['units']
+# add waveforms to the units
+temp_variable = data.nwb.units.to_dataframe()
+spikes.set_info(waveforms = temp_variable['waveform_mean'])
+print(spikes)
+print(spikes['waveforms'])
+
 epochs = data['epochs']
 print(epochs)
-print(spikes['location'])
+
 # get behavior data
 wake_ep = data['epochs']['wake_square']
 angle = data['head-direction']

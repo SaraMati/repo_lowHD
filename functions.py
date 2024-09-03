@@ -83,7 +83,7 @@ def merge_cell_metrics(data, on, new_col, replace_existing_data, save, save_path
     return cell_metrics
 
 
-def load_data(session, remove_noise=True, data_directory=data_dir,
+def load_data_DANDI_postsub(session, remove_noise=True, data_directory=data_dir,
               cell_metrics_path=cell_metrics_path, lazy_loading=False):
     """
     :param session: (str) Session name, formatted according to cell metrics spreadsheet
@@ -107,13 +107,21 @@ def load_data(session, remove_noise=True, data_directory=data_dir,
         # add cell metrics to spike metadata
         data['units'].set_info(cell_metrics)
 
+    # if remove_noise:
+    #     # remove noisy cells
+    #    cell_tags = data['units'].getby_category('gd')
+    #    data['units'] = cell_tags[1]  # getting all cells where good = 1 (=True)
 
-#    if remove_noise:
-        # remove noisy cells
-
-#        cell_tags = data['units'].getby_category('gd')
-#       data['units'] = cell_tags[1]  # getting all cells where good = 1 (=True)
-
+    # add waveforms to units
+    # temp_variable = data.nwb.units.to_dataframe()
+    # temp_Var = temp_variable['waveform_mean']
+    # N = len(temp_variable['waveform_mean'][0])
+    # sampling_rate = 20000 # we should read this from the nwb file 
+    # time_vector = np.arange(0,N)/sampling_rate
+    # waveforms = {}
+    # for index, row in temp_variable.iterrows():
+    #     waveforms[index] = nap.TsdFrame(t = time_vector, d = np.array(row['waveform_mean']))
+    # not finished. will add to the main script for now
     return data
 
 
