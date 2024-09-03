@@ -23,7 +23,7 @@ print(data)
 spikes = data['units']
 epochs = data['epochs']
 print(epochs)
-
+print(spikes['location'])
 # get behavior data
 wake_ep = data['epochs']['wake_square']
 angle = data['head-direction']

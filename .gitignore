@@ -69,3 +69,16 @@ Temporary Items
 externalPackages/xmltree-2.0/@xmltree/private/xml_findstr.mexa64
 
 *.mexmaci64
+
+*.nwb
+*.pickle
+*.py.md5
+*.npz
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.vscode/
+

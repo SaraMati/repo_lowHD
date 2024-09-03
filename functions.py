@@ -23,7 +23,15 @@ def load_cell_metrics(path=cell_metrics_path):
     :param path: (str) Path to cell metrics spreadsheet.
     :return: Returns Pandas dataframe of the cell metrics
     """
-    return pd.read_csv(path, index_col=0)
+    if not os.path.exists(path):
+        # Create an empty DataFrame
+        empty_df = pd.DataFrame()
+        
+        # Save the empty DataFrame to a CSV file
+        empty_df.to_csv(path)
+
+    df = pd.read_csv(path, index_col=0) 
+    return df
 
 
 def merge_cell_metrics(data, on, new_col, replace_existing_data, save, save_path=None, path=cell_metrics_path):
@@ -93,16 +101,18 @@ def load_data(session, remove_noise=True, data_directory=data_dir,
 
     # load cell metrics
     cell_metrics = load_cell_metrics(path=cell_metrics_path)
-    cell_metrics = cell_metrics[cell_metrics['sessionName'] == session]  # restrict cell metrics only to current session
-    cell_metrics = cell_metrics.reset_index(drop=True)  # reset index to align with spikes indices
+    if not cell_metrics.empty:
+        cell_metrics = cell_metrics[cell_metrics['sessionName'] == session]  # restrict cell metrics only to current session
+        cell_metrics = cell_metrics.reset_index(drop=True)  # reset index to align with spikes indices
+        # add cell metrics to spike metadata
+        data['units'].set_info(cell_metrics)
 
-    # add cell metrics to spike metadata
-    data['units'].set_info(cell_metrics)
 
-    if remove_noise:
+#    if remove_noise:
         # remove noisy cells
-        cell_tags = data['units'].getby_category('gd')
-        data['units'] = cell_tags[1]  # getting all cells where good = 1 (=True)
+
+#        cell_tags = data['units'].getby_category('gd')
+#       data['units'] = cell_tags[1]  # getting all cells where good = 1 (=True)
 
     return data
 
