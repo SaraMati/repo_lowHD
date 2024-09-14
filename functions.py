@@ -13,6 +13,8 @@ from misc import *
 import scipy
 import matplotlib.pyplot as plt
 import configparser
+import re
+
 
 data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
@@ -177,21 +179,19 @@ def calculate_speed_adrian(position):
 
 def generate_session_paths(session):
     """
-    The data in folder 000939 is not named consistently with the data tables.
+    The data in folder 000939 is named as "sub-[session name]".
     This helper function takes the session name and converts it to the folder and file name
     Example:
-    Input: 'A3707-200317'
+    Input: 'A3707'
     Output: ('sub-A3707', 'sub-A3707_behavior+ecephys.nwb')
 
     :param session: (str) session name
     :return: Tuple of folder and file name
     """
-    # Extract subject ID from session name
-    subject_id = session.split('-')[0]
 
     # Generate folder and file names
-    folder_name = f'sub-{subject_id}'
-    file_name = f'sub-{subject_id}_behavior+ecephys.nwb'
+    folder_name = f'sub-{session}'
+    file_name = f'sub-{session}_behavior+ecephys.nwb'
 
     return (folder_name, file_name)
 
@@ -283,16 +283,19 @@ def time_reverse_feature(feature, epoch=None):
     return feature_rev
 
 
-def get_sessions(cell_metrics_path=cell_metrics_path):
+def get_sessions():
     """
-    To get a list of all sessions
-    :param cell_metrics_path: (str) Path to cell metrics file
+    To get a list of all sessions from the data directory
     :return: List of stirngs of the session names
     """
 
-    cm = load_cell_metrics(path=cell_metrics_path)
-    return cm['sessionName'].unique().tolist()
+    # Get all folder names in the directory
+    folders = [folder for folder in os.listdir(data_dir) if os.path.isdir(os.path.join(directory_path, folder))]
 
+    # Extract the part after 'sub-' (like 'A303') from the folder names
+    sessions = [folder.split('sub-')[-1] for folder in folders if folder.startswith('sub-')]
+
+    return sessions
 
 def get_cell_type(session, cellID, cell_metrics_path=cell_metrics_path, noise=False):
     """
