@@ -14,7 +14,7 @@ import scipy
 import matplotlib.pyplot as plt
 import configparser
 
-cell_metrics_path, data_dir, project_dir, results_dir = config()
+data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
 
 def load_cell_metrics(path=cell_metrics_path):
@@ -107,6 +107,7 @@ def load_data_DANDI_postsub(session, remove_noise=True, data_directory=data_dir,
         # add cell metrics to spike metadata
         data['units'].set_info(cell_metrics)
 
+    #TODO: why was this commented out?
     # if remove_noise:
     #     # remove noisy cells
     #    cell_tags = data['units'].getby_category('gd')
