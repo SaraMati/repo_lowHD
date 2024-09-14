@@ -7,14 +7,18 @@ This project requires a `config.ini` file to specify paths and directories neede
 
 2. **Add the following content to the `config.ini` file**:
 
-    ```ini
-    [Paths]
-    cell_metrics_path = your\path\here\cellmetricsA37.csv
+       ```ini
+       [Directories]
+       data_dir = your\path\here\000939
+       results_dir = your\path\here\data_results
+       cell_metrics_dir = your\path\here
+ 
+       ```
+   
+      _**What are these paths?**_
 
-    [Directories]
-    data_dir = your\path\here\000939
-    project_dir = your\path\here\project_LowHD
-    results_dir = your\path\here\data_results
-    ```
+         'data_dir': Path to the directory where your DANDI data is stored.
+         'results_dir': Path to the directory where you want the analysis results to be saved.
+         'cell_metrics_dir': Path to the directory where the cell metrics file will be generated.
 
 3. **Customize the paths**: Replace the paths in the example 

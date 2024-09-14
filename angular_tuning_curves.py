@@ -18,7 +18,7 @@ from misc import *
 import seaborn as sns
 
 # Set up configuration
-cell_metrics_path, data_dir, project_dir, results_dir = config()
+data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
 def compute_all_angular_tuning_curves(time_reverse, print_progress=False):
     """
@@ -48,7 +48,7 @@ def compute_all_angular_tuning_curves(time_reverse, print_progress=False):
         if print_progress:
             print(session) # To know the progress of the script when running
 
-        data = load_data(session, remove_noise=False, lazy_loading=False)
+        data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
 
         # get square wake + high velocity epoch and split it
         epoch = get_wake_square_high_speed_ep(data)
