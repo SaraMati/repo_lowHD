@@ -17,7 +17,7 @@ nap.nap_config.suppress_conversion_warnings = True
 # figure
 
 # Loading data
-session = "A3713-200909a" # session to load
+session = "A3713" # session to load
 data = load_data_DANDI_postsub(session)
 print(data)
 
@@ -55,6 +55,8 @@ speed = speed.restrict(wake_ep2)
 tuning_curves = nap.compute_1d_tuning_curves(
     group=units, feature=angle, nb_bins=61, minmax=(0, 2 * np.pi)
 )
+smoothcurves = smoothAngularTuningCurves(tuning_curves, sigma=3)
+
 
 # plot tunning curves
 

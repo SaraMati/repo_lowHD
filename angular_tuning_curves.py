@@ -18,6 +18,16 @@ import seaborn as sns
 # Set up configuration
 data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
+from scipy.ndimage import gaussian_filter1d
+def smoothAngularTuningCurves(tuning_curves, sigma=2):
+    
+    tmp = np.concatenate((tuning_curves.values, tuning_curves.values, tuning_curves.values))
+    tmp = gaussian_filter1d(tmp, sigma=sigma, axis=0)
+
+    return pd.DataFrame(index = tuning_curves.index,
+        data = tmp[tuning_curves.shape[0]:tuning_curves.shape[0]*2], 
+        columns = tuning_curves.columns
+        )
 
 def smooth_angular_tuning_curves(tuning_curves, window=20, deviation=3.0):
     new_tuning_curves = {}
@@ -35,42 +45,19 @@ def smooth_angular_tuning_curves(tuning_curves, window=20, deviation=3.0):
 
     return new_tuning_curves
 
-
-
-
-def compute_angular_tuning_curves(session):
+def compute_angular_tuning_curves(units,feature):
     """
-    This function calculates the smoothed angular tuning curves of a session, restricted to the high velocity
-    square epoch.
-    :param session: (str) session name
+    This function calculates the smoothed angular tuning curves of a 
+    :param: units and feature (e.g. angle) to calculate the tuning curves
     :return: dataframe of angular tuning curves
     """
-
-    data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
-
-    # Get square wake + high velocity epoch 
-    # Further restrict epoch by high speed
-    #high_speed_ep = speed.threshold(3, 'above').time_support
-    #epoch3 = epoch2.intersect(high_speed_ep)
-    epoch = get_wake_square_high_speed_ep(data)
-
-    # Get head direction data
-    angle = data['head-direction']
-
-    # Restrict epoch to where angle has no nas
-    epoch = remove_na(epoch, angle)
-
-    # Restrict angle to epoch
-    angle_wake = angle.restrict(epoch)
-
     # Calculate tuning curves
     bins = np.linspace(0, 2 * np.pi, 180)
     nb_bins = len(bins)
     # epoch will be the time support of the feature
-    tc = pd.DataFrame(smooth_angular_tuning_curves(
-        nap.compute_1d_tuning_curves(group=data['units'], feature=angle_wake, nb_bins=nb_bins, minmax=(0, 2 * np.pi))))
-
-    return tc
+    tuning_curves = nap.compute_1d_tuning_curves(units,feature = feature, nb_bins=nb_bins, minmax=(0, 2 * np.pi))
+    smoothcurves = smoothAngularTuningCurves(tuning_curves, sigma=3)        
+    return smoothcurves
 
 
 def compute_control_angular_tuning_curves(session):

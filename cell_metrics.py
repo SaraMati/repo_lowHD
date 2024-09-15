@@ -68,8 +68,12 @@ def create_cell_metrics():
                 cell_type_labels = get_cell_types_from_DANDI(units)
 
                 # Compute tuning curves
-                tc = compute_angular_tuning_curves(session)
-                tc_control = compute_control_angular_tuning_curves(session)
+                tc = compute_angular_tuning_curves(units,angle)
+                # Compute control tuning curves
+                angle_reversed = time_reverse_feature(angle,epoch3)
+                tc_control = compute_angular_tuning_curves(units,angle_reversed)
+
+                
                 tc_half1, tc_half2 = compute_split_angular_tuning_curves(session)
                 tc_half1_control, tc_half2_control = compute_control_split_angular_tuning_curves(session)
 
