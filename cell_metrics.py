@@ -57,6 +57,12 @@ def create_cell_metrics():
                 tc_correlations = compute_tuning_curve_correlations(tc_half1, tc_half2)
                 tc_correlations_control = compute_tuning_curve_correlations(tc_half1_control, tc_half2_control)
 
+                # Get rates
+                average_rate = units['rate']
+                wake_rate = units.restrict(get_open_field_ep(data))['rate']
+
+                # Get trough to peak
+                trough_to_peak = units['trough_to_peak']
 
                 for unit in units:
                     cellID = unit+1
@@ -66,6 +72,9 @@ def create_cell_metrics():
                         'sessionName': session,
                         'cell': global_cell_count, # Global count of all cells
                         'cellID': cellID, # Local count within the session
+                        'firingRate': average_rate[unit],
+                        'firingRateExplore': wake_rate[unit],
+                        'troughtoPeak': trough_to_peak[unit],
                         'ex': cell_types['ex'][unit],
                         'hd': cell_types['hd'][unit],
                         'fs': cell_types['fs'][unit],
