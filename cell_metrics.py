@@ -62,7 +62,7 @@ def create_cell_metrics():
                 angle = angle.restrict(epoch3)
                 position = position.restrict(epoch3)
                 speed = speed.restrict(epoch3)
-                # further restrict epoch by removing time support where angle has nans
+                # further restrict epoch by removing time support where angle has nans (Adrian says it's normal to have NAN angles but pynapple yet doesn't support nan angles)
                 epoch4 = remove_na(epoch3,angle)
                 units = units.restrict(epoch4)
                 angle = angle.restrict(epoch4)
