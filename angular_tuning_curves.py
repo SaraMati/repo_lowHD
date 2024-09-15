@@ -14,11 +14,11 @@ import matplotlib.pyplot as plt
 import configparser
 from functions import *
 import seaborn as sns
+from scipy.ndimage import gaussian_filter1d
 
 # Set up configuration
 data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
-from scipy.ndimage import gaussian_filter1d
 def smoothAngularTuningCurves(tuning_curves, sigma=2):
     
     tmp = np.concatenate((tuning_curves.values, tuning_curves.values, tuning_curves.values))
@@ -29,23 +29,7 @@ def smoothAngularTuningCurves(tuning_curves, sigma=2):
         columns = tuning_curves.columns
         )
 
-def smooth_angular_tuning_curves(tuning_curves, window=20, deviation=3.0):
-    new_tuning_curves = {}
-    for i in tuning_curves.columns:
-        tcurves = tuning_curves[i]
-        offset = np.mean(np.diff(tcurves.index.values))
-        padded = pd.Series(index=np.hstack((tcurves.index.values - (2 * np.pi) - offset,
-                                            tcurves.index.values,
-                                            tcurves.index.values + (2 * np.pi) + offset)),
-                           data=np.hstack((tcurves.values, tcurves.values, tcurves.values)))
-        smoothed = padded.rolling(window=window, win_type='gaussian', center=True, min_periods=1).mean(std=deviation)
-        new_tuning_curves[i] = smoothed.loc[tcurves.index]
-
-    new_tuning_curves = pd.DataFrame.from_dict(new_tuning_curves)
-
-    return new_tuning_curves
-
-def compute_angular_tuning_curves(units,feature):
+def compute_angular_tuning_curves(units,angle):
     """
     This function calculates the smoothed angular tuning curves of a 
     :param: units and feature (e.g. angle) to calculate the tuning curves
@@ -55,44 +39,12 @@ def compute_angular_tuning_curves(units,feature):
     bins = np.linspace(0, 2 * np.pi, 180)
     nb_bins = len(bins)
     # epoch will be the time support of the feature
-    tuning_curves = nap.compute_1d_tuning_curves(units,feature = feature, nb_bins=nb_bins, minmax=(0, 2 * np.pi))
+    tuning_curves = nap.compute_1d_tuning_curves(units,feature = angle, nb_bins=nb_bins, minmax=(0, 2 * np.pi))
     smoothcurves = smoothAngularTuningCurves(tuning_curves, sigma=3)        
     return smoothcurves
 
 
-def compute_control_angular_tuning_curves(session):
-    """
-    This function calculates the control smooth angular tuning curves with the head-direction time-reversed.
-    The tuning curves is restricted to the high velocity square epoch.
-    :param session: (str) session name
-    :return: dataframe of angular tuning curves
-    """
-
-    data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
-
-    # Get square wake + high velocity epoch 
-    epoch = get_wake_square_high_speed_ep(data)
-
-    # Get head direction data
-    angle = data['head-direction']
-
-    # Restrict epoch to where angle has no nas
-    epoch = remove_na(epoch, angle)
-
-    # Restrict angle to epoch
-    angle_wake_reversed = time_reverse_feature(angle,epoch)
-
-    # Calculate tuning curves
-    bins = np.linspace(0, 2 * np.pi, 180)
-    nb_bins = len(bins)
-    # epoch will be the time support of the feature
-    tc = pd.DataFrame(smooth_angular_tuning_curves(
-        nap.compute_1d_tuning_curves(group=data['units'], feature=angle_wake_reversed, nb_bins=nb_bins, minmax=(0, 2 * np.pi))))
-
-    return tc
-
-
-def compute_split_angular_tuning_curves(session):
+def compute_split_angular_tuning_curves(units,angle,epoch):
     """
     This function calculates two tuning curves, one for each half of the epoch.
     The epoch is the high velocity square epoch. These split tuning curves
@@ -100,72 +52,18 @@ def compute_split_angular_tuning_curves(session):
     :param session: (str) session name
     :return: tupple of dataframe containing the two sets of angular tuning curves
     """
-    data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
-
-    # Get square wake + high velocity epoch and split it
-    epoch = get_wake_square_high_speed_ep(data)
     epoch_half1, epoch_half2 = split_epoch(epoch)
-
-    # Get head direction data
-    angle = data['head-direction']
-
     # Restrict epoch to where angle has no nas
     epoch_half1 = remove_na(epoch_half1, angle)
     epoch_half2 = remove_na(epoch_half2, angle)
-
     # Restrict angle to epochs
     angle_half1 = angle.restrict(epoch_half1)
     angle_half2 = angle.restrict(epoch_half2)
 
-    # Calculate tuning curves
-    bins = np.linspace(0, 2 * np.pi, 180)
-    nb_bins = len(bins)
-
-    # epoch will be the time support of the feature
-    tc_half1 = pd.DataFrame(smooth_angular_tuning_curves(
-        nap.compute_1d_tuning_curves(group=data['units'], feature=angle_half1, nb_bins=nb_bins, minmax=(0, 2 * np.pi))))
-    tc_half2 = pd.DataFrame(smooth_angular_tuning_curves(
-        nap.compute_1d_tuning_curves(group=data['units'], feature=angle_half2, nb_bins=nb_bins, minmax=(0, 2 * np.pi))))
-
+    tc_half1 = compute_angular_tuning_curves(units,angle_half1)
+    tc_half2 = compute_angular_tuning_curves(units,angle_half2)
     return tc_half1, tc_half2
 
-def compute_control_split_angular_tuning_curves(session):
-    """
-    This function calculates two control tuning curves, one for each half of the epoch,
-    using time-reversed head-direction.
-    The epoch is the high velocity square epoch. These split tuning curves
-    is used to compare the stability of head direction tuning across the epoch.
-    :param session: (str) session name
-    :return: tupple of dataframe containing the two sets of angular tuning curves
-    """
-    data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
-
-    # Get square wake + high velocity epoch and split it
-    epoch = get_wake_square_high_speed_ep(data)
-    epoch_half1, epoch_half2 = split_epoch(epoch)
-
-    # Get head direction data
-    angle = data['head-direction']
-
-    # Restrict epoch to where angle has no nas
-    epoch_half1 = remove_na(epoch_half1, angle)
-    epoch_half2 = remove_na(epoch_half2, angle)
-
-    # Restrict angle to epochs
-    angle_half1 = time_reverse_feature(angle, epoch_half1)
-    angle_half2 = time_reverse_feature(angle, epoch_half2)
-
-    # Calculate tuning curves
-    bins = np.linspace(0, 2 * np.pi, 180)
-    nb_bins = len(bins)
-
-    # epoch will be the time support of the feature
-    tc_half1 = pd.DataFrame(smooth_angular_tuning_curves(
-        nap.compute_1d_tuning_curves(group=data['units'], feature=angle_half1, nb_bins=nb_bins, minmax=(0, 2 * np.pi))))
-    tc_half2 = pd.DataFrame(smooth_angular_tuning_curves(
-        nap.compute_1d_tuning_curves(group=data['units'], feature=angle_half2, nb_bins=nb_bins, minmax=(0, 2 * np.pi))))
-
-    return tc_half1, tc_half2
 
 def compute_hd_info(data, tuning_curves, control):
     """
@@ -216,3 +114,89 @@ def compute_tuning_curve_correlations(tuning_curve_1, tuning_curve_2):
     return pd.DataFrame(data)
 
 
+def compute_control_angular_tuning_curves(session):
+    """
+    This function calculates the control smooth angular tuning curves with the head-direction time-reversed.
+    The tuning curves is restricted to the high velocity square epoch.
+    :param session: (str) session name
+    :return: dataframe of angular tuning curves
+    """
+
+    data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
+
+    # Get square wake + high velocity epoch 
+    epoch = get_wake_square_high_speed_ep(data)
+
+    # Get head direction data
+    angle = data['head-direction']
+
+    # Restrict epoch to where angle has no nas
+    epoch = remove_na(epoch, angle)
+
+    # Restrict angle to epoch
+    angle_wake_reversed = time_reverse_feature(angle,epoch)
+
+    # Calculate tuning curves
+    bins = np.linspace(0, 2 * np.pi, 180)
+    nb_bins = len(bins)
+    # epoch will be the time support of the feature
+    tc = pd.DataFrame(smooth_angular_tuning_curves(
+        nap.compute_1d_tuning_curves(group=data['units'], feature=angle_wake_reversed, nb_bins=nb_bins, minmax=(0, 2 * np.pi))))
+
+    return tc
+
+
+# def smooth_angular_tuning_curves(tuning_curves, window=20, deviation=3.0):
+#     new_tuning_curves = {}
+#     for i in tuning_curves.columns:
+#         tcurves = tuning_curves[i]
+#         offset = np.mean(np.diff(tcurves.index.values))
+#         padded = pd.Series(index=np.hstack((tcurves.index.values - (2 * np.pi) - offset,
+#                                             tcurves.index.values,
+#                                             tcurves.index.values + (2 * np.pi) + offset)),
+#                            data=np.hstack((tcurves.values, tcurves.values, tcurves.values)))
+#         smoothed = padded.rolling(window=window, win_type='gaussian', center=True, min_periods=1).mean(std=deviation)
+#         new_tuning_curves[i] = smoothed.loc[tcurves.index]
+
+#     new_tuning_curves = pd.DataFrame.from_dict(new_tuning_curves)
+
+#     return new_tuning_curves
+
+
+# def compute_control_split_angular_tuning_curves(session):
+#     """
+#     This function calculates two control tuning curves, one for each half of the epoch,
+#     using time-reversed head-direction.
+#     The epoch is the high velocity square epoch. These split tuning curves
+#     is used to compare the stability of head direction tuning across the epoch.
+#     :param session: (str) session name
+#     :return: tupple of dataframe containing the two sets of angular tuning curves
+#     """
+#     data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
+
+#     # Get square wake + high velocity epoch and split it
+#     epoch = get_wake_square_high_speed_ep(data)
+#     epoch_half1, epoch_half2 = split_epoch(epoch)
+
+#     # Get head direction data
+#     angle = data['head-direction']
+
+#     # Restrict epoch to where angle has no nas
+#     epoch_half1 = remove_na(epoch_half1, angle)
+#     epoch_half2 = remove_na(epoch_half2, angle)
+
+#     # Restrict angle to epochs
+#     angle_half1 = time_reverse_feature(angle, epoch_half1)
+#     angle_half2 = time_reverse_feature(angle, epoch_half2)
+
+#     # Calculate tuning curves
+#     bins = np.linspace(0, 2 * np.pi, 180)
+#     nb_bins = len(bins)
+
+#     # epoch will be the time support of the feature
+#     tc_half1 = pd.DataFrame(smooth_angular_tuning_curves(
+#         nap.compute_1d_tuning_curves(group=data['units'], feature=angle_half1, nb_bins=nb_bins, minmax=(0, 2 * np.pi))))
+#     tc_half2 = pd.DataFrame(smooth_angular_tuning_curves(
+#         nap.compute_1d_tuning_curves(group=data['units'], feature=angle_half2, nb_bins=nb_bins, minmax=(0, 2 * np.pi))))
+
+#     return tc_half1, tc_half2

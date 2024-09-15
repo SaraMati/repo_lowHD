@@ -62,24 +62,27 @@ def create_cell_metrics():
                 angle = angle.restrict(epoch3)
                 position = position.restrict(epoch3)
                 speed = speed.restrict(epoch3)
+                final_desired_epoch = epoch3
                 ## End of block
                 
                 # Get cell types
                 cell_type_labels = get_cell_types_from_DANDI(units)
 
                 # Compute tuning curves
-                tc = compute_angular_tuning_curves(units,angle)
+                tuning_curves = compute_angular_tuning_curves(units,angle)
                 # Compute control tuning curves
-                angle_reversed = time_reverse_feature(angle,epoch3)
-                tc_control = compute_angular_tuning_curves(units,angle_reversed)
-
+                angle_reversed = time_reverse_feature(angle)
+                tuning_curves_control = compute_angular_tuning_curves(units,angle_reversed)
                 
-                tc_half1, tc_half2 = compute_split_angular_tuning_curves(session)
-                tc_half1_control, tc_half2_control = compute_control_split_angular_tuning_curves(session)
+                # compute tuning curves for two halves of the session
+                tc_half1, tc_half2 = compute_split_angular_tuning_curves(units,angle,final_desired_epoch)
+                tc_half1_control, tc_half2_control = compute_split_angular_tuning_curves(units,angle_reversed,final_desired_epoch)
 
                 # Compute HD info
-                hd_info = compute_hd_info(data, tc, control=False)
-                hd_info_control = compute_hd_info(data, tc_control, control=True)
+                hd_info = nap.compute_1d_mutual_info(tuning_curves, angle, minmax=(0, 2 * np.pi))
+                hd_info_control = nap.compute_1d_mutual_info(tuning_curves_control, angle_reversed, minmax=(0, 2 * np.pi))
+                #hd_info = compute_hd_info(data, tc, control=False)
+                #hd_info_control = compute_hd_info(data, tc_control, control=True)
 
                 # Compute split tuning curve correlations
                 tc_correlations = compute_tuning_curve_correlations(tc_half1, tc_half2)
