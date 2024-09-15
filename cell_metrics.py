@@ -46,7 +46,7 @@ def create_cell_metrics():
                 desired_epoch = 'wake_square'
                 epoch = data['epochs'][desired_epoch]
                 # restrict angle (head direction) to the epoch
-                angle = data['head-direction'].restric(epoch)
+                angle = data['head-direction'].restrict(epoch)
                 # we also have to restrict all the time series to the time of the angles (because the Motive software/Optptrack was turned on after the start of the electrophysiology recording)
                 epoch2 = nap.IntervalSet(start=angle.index[0], end=angle.index[-1])
                 #restrict units and behavioral data to the epoch
