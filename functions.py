@@ -239,7 +239,7 @@ def get_wake_square_high_speed_ep(data, thresh=3):
 
     # Further restrict epoch by high speed
     speed = calculate_speed(data['position'])
-    high_speed_ep = speed.threshold(3, 'above').time_support
+    high_speed_ep = speed.threshold(thresh, 'above').time_support
     wake_square_high_velocity_ep = wake_square_ep.intersect(high_speed_ep)
 
     return wake_square_high_velocity_ep

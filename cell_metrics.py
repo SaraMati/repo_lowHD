@@ -27,7 +27,8 @@ def create_cell_metrics():
 
     try:
         # Check if the file exists
-        if not os.path.isfile(cell_metrics_path):
+        cell_metrics = load_cell_metrics(path=cell_metrics_path)
+        if cell_metrics.empty:         
 
             cell_metrics_data = [] # will hold data
             global_cell_count = 1
@@ -38,9 +39,10 @@ def create_cell_metrics():
                 print(session) # for debugging and tracking
                 # Load current session
                 data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
-                units = data['units'] # Get units
 
-                # select the desired epoch # data has wake_square and wake_triangle 
+                ## This block cleans up the data to the epoch of interest
+                ## change based on your needs, the rest of the analysis is based on this final epoch
+                # select the desired epoch, data has wake_square and wake_triangle 
                 desired_epoch = 'wake_square'
                 epoch = data['epochs'][desired_epoch]
                 # restrict angle (head direction) to the epoch
@@ -48,19 +50,22 @@ def create_cell_metrics():
                 # we also have to restrict all the time series to the time of the angles (because the Motive software/Optptrack was turned on after the start of the electrophysiology recording)
                 epoch2 = nap.IntervalSet(start=angle.index[0], end=angle.index[-1])
                 #restrict units and behavioral data to the epoch
-                units = units.restrict(epoch2)
+                units = data['units'].restrict(epoch2)
                 angle = angle.restrict(epoch2)
                 position = data['position'].restrict(epoch2)
                 speed = calculate_speed(position)
-
                 # Further restrict epoch by high speed
-                high_speed_ep = speed.threshold(3, 'above').time_support
+                desired_speed_threshold = 3 
+                high_speed_ep = speed.threshold(desired_speed_threshold, 'above').time_support
                 epoch3 = epoch2.intersect(high_speed_ep)
-
+                units = units.restrict(epoch3)
+                angle = angle.restrict(epoch3)
+                position = position.restrict(epoch3)
+                speed = speed.restrict(epoch3)
+                ## End of block
+                
                 # Get cell types
                 cell_type_labels = get_cell_types_from_DANDI(units)
-
-
 
                 # Compute tuning curves
                 tc = compute_angular_tuning_curves(session)
