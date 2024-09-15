@@ -13,9 +13,6 @@ from misc import *
 import scipy
 import matplotlib.pyplot as plt
 import configparser
-import re
-
-
 data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
 
@@ -290,7 +287,7 @@ def get_sessions():
     """
 
     # Get all folder names in the directory
-    folders = [folder for folder in os.listdir(data_dir) if os.path.isdir(os.path.join(directory_path, folder))]
+    folders = [folder for folder in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, folder))]
 
     # Extract the part after 'sub-' (like 'A303') from the folder names
     sessions = [folder.split('sub-')[-1] for folder in folders if folder.startswith('sub-')]
