@@ -125,24 +125,6 @@ def load_data_DANDI_postsub(session, remove_noise=True, data_directory=data_dir,
     # not finished. will add to the main script for now
     return data
 
-
-def smooth_angular_tuning_curves(tuning_curves, window=20, deviation=3.0):
-    new_tuning_curves = {}
-    for i in tuning_curves.columns:
-        tcurves = tuning_curves[i]
-        offset = np.mean(np.diff(tcurves.index.values))
-        padded = pd.Series(index=np.hstack((tcurves.index.values - (2 * np.pi) - offset,
-                                            tcurves.index.values,
-                                            tcurves.index.values + (2 * np.pi) + offset)),
-                           data=np.hstack((tcurves.values, tcurves.values, tcurves.values)))
-        smoothed = padded.rolling(window=window, win_type='gaussian', center=True, min_periods=1).mean(std=deviation)
-        new_tuning_curves[i] = smoothed.loc[tcurves.index]
-
-    new_tuning_curves = pd.DataFrame.from_dict(new_tuning_curves)
-
-    return new_tuning_curves
-
-
 def calculate_speed(position):
     """
     Calculate animal's speed from animal's 2D position data
@@ -240,6 +222,7 @@ def remove_na(epoch, feature):
     feature_no_nans_epoch = feature.dropna().time_support
 
     return epoch.intersect(feature_no_nans_epoch)
+
 def split_epoch(epoch):
     """
     Given an interval set, returns the interval split in half.
@@ -372,3 +355,30 @@ def compute_good_waveform(mean_w):
             waveform = wave
 
     return (waveform, channel)
+
+
+def config():
+    """
+    Gets paths from config.ini
+    :return: paths
+    """
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    data_dir = config['Directories']['data_dir']
+    results_dir = config['Directories']['results_dir']
+    cell_metrics_dir = config['Directories']['cell_metrics_dir']
+    cell_metrics_path = os.path.join(cell_metrics_dir, 'cell_metricsA37.csv')
+
+    return data_dir, results_dir, cell_metrics_dir, cell_metrics_path
+def ensure_dir_exists(directory):
+    """
+    Check if directory exist, if not create it.
+    :param directory: (str)
+    :return: bool: True if already exists, False if not
+    """
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        return False
+    else:
+        return True

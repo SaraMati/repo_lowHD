@@ -13,6 +13,9 @@ warnings.filterwarnings("ignore")
 # configure pynapple to ignore conversion warning
 nap.nap_config.suppress_conversion_warnings = True
 
+# make cell metrics (data)
+# figure
+
 # Loading data
 session = "A3713-200909a" # session to load
 data = load_data_DANDI_postsub(session)
@@ -29,16 +32,23 @@ epochs = data['epochs']
 print(epochs)
 
 # get behavior data
-wake_ep = data['epochs']['wake_square']
 angle = data['head-direction']
 position = data['position']
 speed = calculate_speed(position)
 
 # restrict to epoch
+wake_ep = data['epochs']['wake_square']
 spikes = spikes.restrict(wake_ep)
 angle = angle.restrict(wake_ep)
 position = position.restrict(wake_ep)
 speed = speed.restrict(wake_ep)
+
+# we also have to restrict all the time series to the time of the angles (because the Motive software/Optptrack was turned on after the start of the electrophysiology recording)
+wake_ep2 = nap.IntervalSet(start=angle.index[0], end=angle.index[-1])
+spikes = spikes.restrict(wake_ep2)
+angle = angle.restrict(wake_ep2)
+position = position.restrict(wake_ep2)
+speed = speed.restrict(wake_ep2)
 
 # compute tuning curves
 tuning_curves = nap.compute_1d_tuning_curves(

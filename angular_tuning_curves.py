@@ -20,6 +20,26 @@ import seaborn as sns
 # Set up configuration
 data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
+
+def smooth_angular_tuning_curves(tuning_curves, window=20, deviation=3.0):
+    new_tuning_curves = {}
+    for i in tuning_curves.columns:
+        tcurves = tuning_curves[i]
+        offset = np.mean(np.diff(tcurves.index.values))
+        padded = pd.Series(index=np.hstack((tcurves.index.values - (2 * np.pi) - offset,
+                                            tcurves.index.values,
+                                            tcurves.index.values + (2 * np.pi) + offset)),
+                           data=np.hstack((tcurves.values, tcurves.values, tcurves.values)))
+        smoothed = padded.rolling(window=window, win_type='gaussian', center=True, min_periods=1).mean(std=deviation)
+        new_tuning_curves[i] = smoothed.loc[tcurves.index]
+
+    new_tuning_curves = pd.DataFrame.from_dict(new_tuning_curves)
+
+    return new_tuning_curves
+
+
+
+
 def compute_all_angular_tuning_curves(time_reverse, print_progress=False):
     """
     Computing tuning curves for all cells in each session, including split tuning curves, and saving.
