@@ -62,7 +62,13 @@ def create_cell_metrics():
                 angle = angle.restrict(epoch3)
                 position = position.restrict(epoch3)
                 speed = speed.restrict(epoch3)
-                final_desired_epoch = epoch3
+                # further restrict epoch by removing time support where angle has nans
+                epoch4 = remove_na(epoch3,angle)
+                units = units.restrict(epoch4)
+                angle = angle.restrict(epoch4)
+                position = position.restrict(epoch4)
+                speed = speed.restrict(epoch4)
+                final_desired_epoch = epoch4
                 ## End of block
                 
                 # Get cell types
