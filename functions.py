@@ -24,7 +24,7 @@ def config():
     data_dir = config['Directories']['data_dir']
     results_dir = config['Directories']['results_dir']
     cell_metrics_dir = config['Directories']['cell_metrics_dir']
-    cell_metrics_path = os.path.join(cell_metrics_dir, 'cellmetricsA37.csv')
+    cell_metrics_path = os.path.join(cell_metrics_dir, 'cellmetrics.csv')
 
     return data_dir, results_dir, cell_metrics_dir, cell_metrics_path
 
@@ -318,7 +318,7 @@ def get_sessions():
 
     return sessions
 
-def get_cell_types_from_DANDI(data):
+def get_cell_types_from_DANDI(units):
     """
     TODO: Figure out how to detect noisy cells
     This function goes through each unit of a session and based on the default
@@ -328,13 +328,11 @@ def get_cell_types_from_DANDI(data):
     :return: (Pandas Dataframe) of one-hot-encoded cell types
     """
 
-    units = data['units']
-
-    ex = units._metadata['is_head_direction']
-    hd = units._metadata['is_excitatory']
-    fs = units._metadata['is_fast_spiking']
-    nhd = ((ex == 1) & (hd== 0)).astype(int)
-    other = ((ex == 0) & (hd == 0) & (nhd == 0) & (fs == 0)).astype(int)
+    ex = units.is_excitatory
+    hd = units.is_head_direction
+    fs = units.is_fast_spiking
+    nhd = ((ex == 1) & (hd == 0)).astype(int)
+    other = ((ex == 0) & (fs == 0)).astype(int)
 
     one_hot_encoded_cell_types = pd.DataFrame({
         'ex': ex,

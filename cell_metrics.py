@@ -40,8 +40,27 @@ def create_cell_metrics():
                 data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
                 units = data['units'] # Get units
 
+                # select the desired epoch # data has wake_square and wake_triangle 
+                desired_epoch = 'wake_square'
+                epoch = data['epochs'][desired_epoch]
+                # restrict angle (head direction) to the epoch
+                angle = data['head-direction'].restric(epoch)
+                # we also have to restrict all the time series to the time of the angles (because the Motive software/Optptrack was turned on after the start of the electrophysiology recording)
+                epoch2 = nap.IntervalSet(start=angle.index[0], end=angle.index[-1])
+                #restrict units and behavioral data to the epoch
+                units = units.restrict(epoch2)
+                angle = angle.restrict(epoch2)
+                position = data['position'].restrict(epoch2)
+                speed = calculate_speed(position)
+
+                # Further restrict epoch by high speed
+                high_speed_ep = speed.threshold(3, 'above').time_support
+                epoch3 = epoch2.intersect(high_speed_ep)
+
                 # Get cell types
-                cell_types = get_cell_types_from_DANDI(data)
+                cell_type_labels = get_cell_types_from_DANDI(units)
+
+
 
                 # Compute tuning curves
                 tc = compute_angular_tuning_curves(session)
@@ -58,8 +77,9 @@ def create_cell_metrics():
                 tc_correlations_control = compute_tuning_curve_correlations(tc_half1_control, tc_half2_control)
 
                 # Get rates
+                #TODO: make open field and wake epoch consistent 
                 average_rate = units['rate']
-                wake_rate = units.restrict(get_open_field_ep(data))['rate']
+                wake_explore = units.restrict(get_open_field_ep(data))['rate']
 
                 # Get trough to peak
                 trough_to_peak = units['trough_to_peak']
@@ -73,13 +93,13 @@ def create_cell_metrics():
                         'cell': global_cell_count, # Global count of all cells
                         'cellID': cellID, # Local count within the session
                         'firingRate': average_rate[unit],
-                        'firingRateExplore': wake_rate[unit],
+                        'firingRateExplore': wake_explore[unit],
                         'troughtoPeak': trough_to_peak[unit],
-                        'ex': cell_types['ex'][unit],
-                        'hd': cell_types['hd'][unit],
-                        'fs': cell_types['fs'][unit],
-                        'nhd': cell_types['nhd'][unit],
-                        'other': cell_types['other'][unit],
+                        'ex': cell_type_labels['ex'][unit],
+                        'hd': cell_type_labels['hd'][unit],
+                        'fs': cell_type_labels['fs'][unit],
+                        'nhd': cell_type_labels['nhd'][unit],
+                        'other': cell_type_labels['other'][unit],
                         'hdInfo': hd_info.values.flatten()[unit],
                         'hdInfo_rev': hd_info_control.values.flatten()[unit],
                         'pearsonR': tc_correlations['pearsonR'][unit],

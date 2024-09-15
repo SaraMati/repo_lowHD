@@ -49,6 +49,9 @@ def compute_angular_tuning_curves(session):
     data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
 
     # Get square wake + high velocity epoch 
+    # Further restrict epoch by high speed
+    #high_speed_ep = speed.threshold(3, 'above').time_support
+    #epoch3 = epoch2.intersect(high_speed_ep)
     epoch = get_wake_square_high_speed_ep(data)
 
     # Get head direction data
