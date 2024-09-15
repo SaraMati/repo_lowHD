@@ -35,6 +35,7 @@ def create_cell_metrics():
 
             # Iterate through sessions, load data, and analyze data
             for session in sessions:
+                print(session) # for debugging and tracking
                 # Load current session
                 data = load_data_DANDI_postsub(session, remove_noise=False, lazy_loading=False)
                 units = data['units'] # Get units
@@ -76,14 +77,14 @@ def create_cell_metrics():
                         'pearsonR_rev': tc_correlations_control['pearsonR'][unit]
                     })
 
-                # Increment global cell counter
-                global_cell_count +=1
+                    # Increment global cell counter
+                    global_cell_count +=1
 
             # Create DataFrame from collected cell metrics data
             cell_metrics_df = pd.DataFrame(cell_metrics_data)
 
             # Save the DataFrame to CSV
-            cell_metrics_df.to_csv(cell_metrics_path, index=False)
+            cell_metrics_df.to_csv(cell_metrics_path)
             print(f"Cell metrics file created at {cell_metrics_path}")
 
         else:
