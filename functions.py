@@ -189,16 +189,42 @@ def generate_session_paths(session):
 
     return (folder_name, file_name)
 
+def get_open_field_ep(data, thresh=3):
+    """
+    Get open field exploration (both square and triangle). Exploration
+    during wake is defined as when the animal is has high velocity.
+    :param data:
+    :param thresh:
+    :return: Interval set of the epoch
+    """
+
+    epochs = data['epochs']
+    epoch_names = epochs.keys()
+
+    if 'wake_triangle' in epoch_names:
+        wake_epoch = epochs['wake_triangle'].union(epochs['wake_square'])
+    else:
+        wake_epoch = epochs['wake_square'] # all sessions have square open field but not all have triangle
+
+    # Restrict further to high velocity
+    speed = calculate_speed(data['position'])
+    high_speed_ep = speed.threshold(3, 'above').time_support
+    exploration_ep = wake_epoch.intersect(high_speed_ep)
+
+    return exploration_ep
 
 def get_wake_square_high_speed_ep(data, thresh=3):
     """
     Get the wake square epoch restricted to the animal's high velocity.
-    This is the epoch needed for tuning curves in square terrain
+    This is the epoch needed for tuning curves in square terrain.
+    This function also defines the epoch based on the start and end time
+    of head direction time support, to remove recording artifact
+    (head direction tracking is started after the wake epoch starts).
+    Thus this is the epoch that should be used for angular tuning curves.
 
-    TODO: If we incorportate speed into the data object itself, adjust accordingly
-    :param data:
-    :param thresh:
-    :return:
+    :param data: Pynapple data object
+    :param thresh: Threshold for high speed
+    :return: Interval set of the epoch
     """
 
     # Get wake square epoch
@@ -319,6 +345,36 @@ def get_cell_types_from_DANDI(data):
     })
 
     return one_hot_encoded_cell_types
+
+
+def get_viable_cells(data):
+    """
+    Identifies viable cells from PoSub recordings based on criteria from Duszkiewicz et al. (2024).
+
+    Viable units are determined by two criteria:
+    1. Units with an average firing rate of at least 0.5 Hz during open field exploration.
+    2. Units with a waveform that exhibits a negative deflection, to exclude spikes from fibers of passage.
+
+    Cells that do not meet these criteria are considered 'noisy'.
+
+    :param data: Pynapple data object containing unit recordings and metadata.
+    :return: DataFrame with one-hot encoded values indicating viable/good cells (1 = good, 0 = noise).
+    """
+
+    # Get epochs during open field exploration
+    exploration_ep = get_open_field_ep(data)
+
+    # Restrict units to open field exploration
+    units_explore = data['units'].restrict(exploration_ep)
+
+    # Get cells' rate during open field exploration
+    rate_explore = units_explore['rate']
+
+    # Get cells' trough to peaks
+    t2p = units_explore['trough_to_peak'] # trough to peak stays same regardless of epoch
+
+    # Classify cells as good or noise
+    classification = ((rate_explore >= 0.5) & (t2p < 0)).astype(int)
 
 
 def get_cell_type(session, cellID, cell_metrics_path=cell_metrics_path, noise=False):
