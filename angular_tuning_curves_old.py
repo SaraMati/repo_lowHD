@@ -14,7 +14,6 @@ import scipy
 import matplotlib.pyplot as plt
 import configparser
 from functions import *
-from misc import *
 import seaborn as sns
 
 # Set up configuration
