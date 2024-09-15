@@ -9,13 +9,26 @@ import numpy as np
 import pandas as pd
 import os
 import pynapple as nap
-from misc import *
 import scipy
 import matplotlib.pyplot as plt
 import configparser
 
-data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
+def config():
+    """
+    Gets paths from config.ini
+    :return: paths
+    """
+    config = configparser.ConfigParser()
+    config.read('config.ini')
 
+    data_dir = config['Directories']['data_dir']
+    results_dir = config['Directories']['results_dir']
+    cell_metrics_dir = config['Directories']['cell_metrics_dir']
+    cell_metrics_path = os.path.join(cell_metrics_dir, 'cellmetricsA37.csv')
+
+    return data_dir, results_dir, cell_metrics_dir, cell_metrics_path
+
+data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
 def load_cell_metrics(path=cell_metrics_path):
     """
@@ -81,7 +94,6 @@ def merge_cell_metrics(data, on, new_col, replace_existing_data, save, save_path
         cell_metrics.to_csv(cell_metrics_path)  # replace old cell metrics file
 
     return cell_metrics
-
 
 def load_data_DANDI_postsub(session, remove_noise=True, data_directory=data_dir,
               cell_metrics_path=cell_metrics_path, lazy_loading=False):
@@ -159,21 +171,21 @@ def calculate_speed_adrian(position):
 
 def generate_session_paths(session):
     """
-    The data in folder 000939 is not named consistently with the data tables.
+    The data in folder 000939 is named as "sub-[session name]".
     This helper function takes the session name and converts it to the folder and file name
     Example:
-    Input: 'A3707-200317'
-    Output: ('sub-A3707', 'sub-A3707_behavior+ecephys.nwb')
+    Input: 'A3707'
+    Output: ('sub-A3707', 'sub-A3707_behavior+ecephys.nwb') OR ('sub-A3707', 'sub-A3707_behavior+ecephys+ogen.nwb')
 
     :param session: (str) session name
     :return: Tuple of folder and file name
     """
-    # Extract subject ID from session name
-    subject_id = session.split('-')[0]
 
     # Generate folder and file names
-    folder_name = f'sub-{subject_id}'
-    file_name = f'sub-{subject_id}_behavior+ecephys.nwb'
+    folder_name = f'sub-{session}'
+    folder_path = os.path.join(data_dir, folder_name)
+
+    file_name = files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))][0]
 
     return (folder_name, file_name)
 
@@ -266,15 +278,47 @@ def time_reverse_feature(feature, epoch=None):
     return feature_rev
 
 
-def get_sessions(cell_metrics_path=cell_metrics_path):
+def get_sessions():
     """
-    To get a list of all sessions
-    :param cell_metrics_path: (str) Path to cell metrics file
+    To get a list of all sessions from the data directory
     :return: List of stirngs of the session names
     """
 
-    cm = load_cell_metrics(path=cell_metrics_path)
-    return cm['sessionName'].unique().tolist()
+    # Get all folder names in the directory
+    folders = [folder for folder in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, folder))]
+
+    # Extract the part after 'sub-' (like 'A303') from the folder names
+    sessions = [folder.split('sub-')[-1] for folder in folders if folder.startswith('sub-')]
+
+    return sessions
+
+def get_cell_types_from_DANDI(data):
+    """
+    TODO: Figure out how to detect noisy cells
+    This function goes through each unit of a session and based on the default
+    classifications in the DANDI dataset (i.e. is_excitatory, is_fast_spiking, is_head_direction)
+    will create a dataframe that will one-hot-encode the cell type.
+    :param data: (Pynapple object) containing the session data
+    :return: (Pandas Dataframe) of one-hot-encoded cell types
+    """
+
+    units = data['units']
+
+    ex = units._metadata['is_head_direction']
+    hd = units._metadata['is_excitatory']
+    fs = units._metadata['is_fast_spiking']
+    nhd = ((ex == 1) & (hd== 0)).astype(int)
+    other = ((ex == 0) & (hd == 0) & (nhd == 0) & (fs == 0)).astype(int)
+
+    one_hot_encoded_cell_types = pd.DataFrame({
+        'ex': ex,
+        'hd': hd,
+        'fs': fs,
+        'nhd': nhd,
+        'other': other
+    })
+
+    return one_hot_encoded_cell_types
 
 
 def get_cell_type(session, cellID, cell_metrics_path=cell_metrics_path, noise=False):
@@ -356,21 +400,6 @@ def compute_good_waveform(mean_w):
 
     return (waveform, channel)
 
-
-def config():
-    """
-    Gets paths from config.ini
-    :return: paths
-    """
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-
-    data_dir = config['Directories']['data_dir']
-    results_dir = config['Directories']['results_dir']
-    cell_metrics_dir = config['Directories']['cell_metrics_dir']
-    cell_metrics_path = os.path.join(cell_metrics_dir, 'cell_metricsA37.csv')
-
-    return data_dir, results_dir, cell_metrics_dir, cell_metrics_path
 def ensure_dir_exists(directory):
     """
     Check if directory exist, if not create it.
