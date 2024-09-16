@@ -12,13 +12,14 @@ import seaborn as sns
 
 data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
-def plot_HD_info_distribution(cell_metrics, save, format=None, log_x=True, boundary=True, percentile=99, print_stats=True):
+def plot_HD_info_distribution(cell_metrics, save, num_bins=50, format=None, log_x=True, boundary=True, percentile=99, print_stats=True):
     """
     Plots the distribution of HD info of excitatory cells to show the definition of HD cells and Low HD cells.
     HD cells are cells that have higher HD Info than 99% of control distribution.
     Default is on a log x scale.
     :param cellmetrics: (Pandas DataFrame) Contains the cell metrics data for plotting
     :param save: (bool) Whether to save figure
+    :param num_bins: (int) Number of bins to use in plotting, default is 50.
     :param format: (str) Format of the image. If None, default is PNG
     :param log_x: (bool) Whether to plot on log x scale. Default is True.
     :param boundary: (bool) Whether to plot a boundary between HD and non HD cells
@@ -36,12 +37,12 @@ def plot_HD_info_distribution(cell_metrics, save, format=None, log_x=True, bound
 
     # Adjust bins based on whether x log scale
     if log_x:
-        bins = compute_log_bins(hd_info, 50)
-        control_bins = compute_log_bins(hd_info_control, 50)
+        bins = compute_log_bins(hd_info, num_bins)
+        control_bins = compute_log_bins(hd_info_control, num_bins)
 
     else:
-        bins = 50
-        control_bins = 50
+        bins = num_bins
+        control_bins = num_bins
 
     # Defining boundary between HD and Low HD cells.
     percentile_boundary = np.percentile(hd_info_control.dropna(), percentile)
@@ -92,6 +93,8 @@ def plot_HD_info_distribution(cell_metrics, save, format=None, log_x=True, bound
         # Wilcoxon analysis comparing HD info distribution with control distrbution
         print(scipy.stats.wilcoxon(hd_info, hd_info_control, alternative='greater'))
         print()
+
+
 def plot_correlation_vs_hd_info(cell_metrics, save, format=None):
     """
     This plots a scatter plot of the tuning curve correlation vs. the HD Info
@@ -130,7 +133,8 @@ def plot_correlation_vs_hd_info(cell_metrics, save, format=None):
 
     plt.show()
 
-def plot_correlation_distribution(cell_metrics, cell_type, save, format=None, print_stats=True):
+
+def plot_correlation_distribution(cell_metrics, cell_type, save, num_bins = 50, format=None, print_stats=True):
     """
     Plots the distribution of split tuning curve correlation metrics for a specified cell type.
 
@@ -144,6 +148,7 @@ def plot_correlation_distribution(cell_metrics, cell_type, save, format=None, pr
     :param cell_metrics: (pd.DataFrame) DataFrame containing the cell metrics for plotting.
     :param cell_type: (str) Specify the cell type: "hd" for HD Cells, "nhd" for Low HD Cells, or "fs" for fast spiking cells.
     :param save: (bool) If True, the plot will be saved to a file.
+    :param num_bins: (int) Number of bins to use in plotting, default is 50.
     :param format: (str) Format to save the figure in (e.g., "png", "eps"). If None, default is None.
     :param print_stats: (bool) If True, statistical analysis will be printed to the console.
     :return: None
@@ -163,8 +168,8 @@ def plot_correlation_distribution(cell_metrics, cell_type, save, format=None, pr
     control_correlation = cells['pearsonR_rev']
 
     # Plotting
-    plt.hist(control_correlation, bins=50, color='lightgrey', label='Control')
-    plt.hist(correlation, bins=50, color=colours[cell_type], label=labels[cell_type])
+    plt.hist(control_correlation, bins=num_bins, color='lightgrey', label='Control')
+    plt.hist(correlation, bins=num_bins, color=colours[cell_type], label=labels[cell_type])
 
     # Customizing axes
     plt.tick_params(axis='both', direction='in', pad=5, labelsize=20)
