@@ -6,3 +6,4 @@ Functions related to spatial tuning
 """
 
 def compute_spatial_tuning_curves():
+    return None
