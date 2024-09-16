@@ -1,8 +1,8 @@
 """
-Functions for angular tuning curves
-@Author: Selen Calgin
+Functions related to angular tuning curves.
+@Author: Selen Calgin & Sara Mahallati
 @Date: 29/07/2024
-@Last edited: 14/09/2024
+@Last edited: 16/09/2024
 """
 
 import numpy as np
@@ -19,7 +19,7 @@ from scipy.ndimage import gaussian_filter1d
 # Set up configuration
 data_dir, results_dir, cell_metrics_dir, cell_metrics_path = config()
 
-def smoothAngularTuningCurves(tuning_curves, sigma=2):
+def smooth_angular_tuning_curves(tuning_curves, sigma=2):
     
     tmp = np.concatenate((tuning_curves.values, tuning_curves.values, tuning_curves.values))
     tmp = gaussian_filter1d(tmp, sigma=sigma, axis=0)
@@ -40,11 +40,11 @@ def compute_angular_tuning_curves(units,angle):
     nb_bins = len(bins)
     # epoch will be the time support of the feature
     tuning_curves = nap.compute_1d_tuning_curves(units,feature = angle, nb_bins=nb_bins, minmax=(0, 2 * np.pi))
-    smoothcurves = smoothAngularTuningCurves(tuning_curves, sigma=3)        
-    return smoothcurves
+    smooth_curves = smooth_angular_tuning_curves(tuning_curves, sigma=3)
+    return smooth_curves
 
 
-def compute_split_angular_tuning_curves(units,angle,epoch):
+def compute_split_angular_tuning_curves(units, angle, epoch):
     """
     This function calculates two tuning curves, one for each half of the epoch.
     The epoch is the high velocity square epoch. These split tuning curves
