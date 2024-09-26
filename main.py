@@ -21,8 +21,8 @@ cell_metrics.create_cell_metrics()
 cell_metrics = load_cell_metrics()
 
 # Figures
-plot_HD_info_distribution(cell_metrics=cell_metrics, save=False)
-plot_correlation_vs_hd_info(cell_metrics=cell_metrics, save=False)
-plot_correlation_distribution(cell_metrics=cell_metrics, cell_type='hd', save=False) # HD
-plot_correlation_distribution(cell_metrics=cell_metrics, cell_type='nhd', save=False) # Low HD
-plot_correlation_distribution(cell_metrics=cell_metrics, cell_type='fs', save=False) # FS
+plot_HD_info_distribution(cell_metrics=cell_metrics, save=True)
+plot_correlation_vs_hd_info(cell_metrics=cell_metrics, save=True)
+plot_correlation_distribution(cell_metrics=cell_metrics, cell_type='hd', save=True) # HD
+plot_correlation_distribution(cell_metrics=cell_metrics, cell_type='nhd', save=True) # Low HD
+plot_correlation_distribution(cell_metrics=cell_metrics, cell_type='fs', save=True) # FS
